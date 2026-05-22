@@ -1,0 +1,682 @@
+{
+    "info": {
+        "_postman_id": "a3f8c2e1-9b4d-4f6a-8c1e-2d5f7a9b3c4e",
+        "name": "Swap Orchestrator - Transaction API",
+        "description": "Postman collection for `/api/v1/transactions` endpoints.\n\n**Setup:** Import this collection and ensure the orchestrator is running (`make up` or `npm run start:dev`).\n\n**Variables:** `baseUrl`, `userId`, and `consumerAddress` are preconfigured. Successful create requests store `transactionId` / `transactionWithConsumerId` for downstream requests.",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+        {
+            "key": "baseUrl",
+            "value": "http://localhost:3000"
+        },
+        {
+            "key": "userId",
+            "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        {
+            "key": "consumerAddress",
+            "value": "0x70997970c51812dc3a010c7d01b50e0d17dc79c8"
+        },
+        {
+            "key": "transactionId",
+            "value": ""
+        },
+        {
+            "key": "transactionWithConsumerId",
+            "value": ""
+        },
+        {
+            "key": "unknownTransactionId",
+            "value": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        }
+    ],
+    "item": [
+        {
+            "name": "Happy Path Flow",
+            "description": "Sequential flow: create → get. Run this folder with the Collection Runner.",
+            "item": [
+                {
+                    "name": "1. Create Transaction",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Status is 201 Created', function () {",
+                                    "    pm.response.to.have.status(201);",
+                                    "});",
+                                    "",
+                                    "pm.test('Content-Type is JSON', function () {",
+                                    "    pm.response.to.have.header('Content-Type', /json/);",
+                                    "});",
+                                    "",
+                                    "const body = pm.response.json();",
+                                    "",
+                                    "pm.test('Transaction shape is valid', function () {",
+                                    "    pm.expect(body.id).to.match(/^[a-f0-9]{32}$/);",
+                                    "    pm.expect(body.currency).to.eql('EUR');",
+                                    "    pm.expect(body.status).to.eql('CREATED');",
+                                    "    pm.expect(body.amount).to.eql('100.5');",
+                                    "    pm.expect(body.user.id).to.eql(pm.collectionVariables.get('userId'));",
+                                    "    pm.expect(body.created_at).to.be.a('string');",
+                                    "    pm.expect(body.consumer_address).to.be.null;",
+                                    "    pm.expect(body.contract_address).to.be.null;",
+                                    "    pm.expect(body.tx_hash).to.be.null;",
+                                    "});",
+                                    "",
+                                    "pm.collectionVariables.set('transactionId', body.id);"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"currency\": \"eur\",\n  \"amount\": \"100.50\",\n  \"user\": {\n    \"id\": \"{{userId}}\"\n  }\n}"
+                        },
+                        "url": "{{baseUrl}}/api/v1/transactions"
+                    }
+                },
+                {
+                    "name": "2. Get Transaction by ID",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Status is 200 OK', function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "const body = pm.response.json();",
+                                    "const expectedId = pm.collectionVariables.get('transactionId');",
+                                    "",
+                                    "pm.test('Returns the created transaction', function () {",
+                                    "    pm.expect(expectedId, 'Run \"1. Create Transaction\" first').to.not.be.empty;",
+                                    "    pm.expect(body.id).to.eql(expectedId);",
+                                    "    pm.expect(body.currency).to.eql('EUR');",
+                                    "    pm.expect(body.status).to.eql('CREATED');",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": "{{baseUrl}}/api/v1/transactions/{{transactionId}}"
+                    }
+                },
+                {
+                    "name": "3. Create Transaction with Consumer",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Status is 201 Created', function () {",
+                                    "    pm.response.to.have.status(201);",
+                                    "});",
+                                    "",
+                                    "const body = pm.response.json();",
+                                    "",
+                                    "pm.test('Consumer address is persisted', function () {",
+                                    "    pm.expect(body.id).to.match(/^[a-f0-9]{32}$/);",
+                                    "    pm.expect(body.consumer_address).to.eql(pm.collectionVariables.get('consumerAddress').toLowerCase());",
+                                    "    pm.expect(body.status).to.eql('CREATED');",
+                                    "});",
+                                    "",
+                                    "pm.collectionVariables.set('transactionWithConsumerId', body.id);"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"currency\": \"USD\",\n  \"amount\": \"250\",\n  \"user\": {\n    \"id\": \"{{userId}}\"\n  },\n  \"consumer\": {\n    \"address\": \"{{consumerAddress}}\"\n  }\n}"
+                        },
+                        "url": "{{baseUrl}}/api/v1/transactions"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Create Transaction",
+            "item": [
+                {
+                    "name": "Create - Valid (minimal)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Status is 201 Created', function () {",
+                                    "    pm.response.to.have.status(201);",
+                                    "});",
+                                    "",
+                                    "const body = pm.response.json();",
+                                    "",
+                                    "pm.test('Normalizes currency and amount', function () {",
+                                    "    pm.expect(body.currency).to.eql('EUR');",
+                                    "    pm.expect(body.amount).to.eql('100.5');",
+                                    "    pm.expect(body.status).to.eql('CREATED');",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"currency\": \" eur \",\n  \"amount\": \"100.50\",\n  \"user\": {\n    \"id\": \"{{userId}}\"\n  }\n}"
+                        },
+                        "url": "{{baseUrl}}/api/v1/transactions"
+                    }
+                },
+                {
+                    "name": "Create - Valid with consumer address",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Status is 201 Created', function () {",
+                                    "    pm.response.to.have.status(201);",
+                                    "});",
+                                    "",
+                                    "const body = pm.response.json();",
+                                    "",
+                                    "pm.test('Consumer address is stored', function () {",
+                                    "    pm.expect(body.consumer_address).to.eql(pm.collectionVariables.get('consumerAddress').toLowerCase());",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"currency\": \"EUR\",\n  \"amount\": \"1\",\n  \"user\": {\n    \"id\": \"{{userId}}\"\n  },\n  \"consumer\": {\n    \"address\": \"{{consumerAddress}}\"\n  }\n}"
+                        },
+                        "url": "{{baseUrl}}/api/v1/transactions"
+                    }
+                },
+                {
+                    "name": "Create - Valid numeric amount",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Status is 201 Created', function () {",
+                                    "    pm.response.to.have.status(201);",
+                                    "});",
+                                    "",
+                                    "pm.test('Numeric amount is serialized as string', function () {",
+                                    "    pm.expect(pm.response.json().amount).to.eql('42');",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"currency\": \"USD\",\n  \"amount\": 42,\n  \"user\": {\n    \"id\": \"{{userId}}\"\n  }\n}"
+                        },
+                        "url": "{{baseUrl}}/api/v1/transactions"
+                    }
+                },
+                {
+                    "name": "Create - Invalid currency",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Status is 400 Bad Request', function () {",
+                                    "    pm.response.to.have.status(400);",
+                                    "});",
+                                    "",
+                                    "pm.test('Validation error mentions currency', function () {",
+                                    "    const body = pm.response.json();",
+                                    "    const payload = JSON.stringify(body).toLowerCase();",
+                                    "    pm.expect(payload).to.include('currency');",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"currency\": \"EURO\",\n  \"amount\": \"1\",\n  \"user\": {\n    \"id\": \"{{userId}}\"\n  }\n}"
+                        },
+                        "url": "{{baseUrl}}/api/v1/transactions"
+                    }
+                },
+                {
+                    "name": "Create - Invalid amount (negative)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Status is 400 Bad Request', function () {",
+                                    "    pm.response.to.have.status(400);",
+                                    "});",
+                                    "",
+                                    "pm.test('Validation error mentions amount', function () {",
+                                    "    const payload = JSON.stringify(pm.response.json()).toLowerCase();",
+                                    "    pm.expect(payload).to.include('amount');",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"currency\": \"EUR\",\n  \"amount\": \"-1\",\n  \"user\": {\n    \"id\": \"{{userId}}\"\n  }\n}"
+                        },
+                        "url": "{{baseUrl}}/api/v1/transactions"
+                    }
+                },
+                {
+                    "name": "Create - Invalid user id",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Status is 400 Bad Request', function () {",
+                                    "    pm.response.to.have.status(400);",
+                                    "});",
+                                    "",
+                                    "pm.test('Validation error mentions md5', function () {",
+                                    "    const payload = JSON.stringify(pm.response.json()).toLowerCase();",
+                                    "    pm.expect(payload).to.match(/md5|user/);",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"currency\": \"EUR\",\n  \"amount\": \"1\",\n  \"user\": {\n    \"id\": \"short\"\n  }\n}"
+                        },
+                        "url": "{{baseUrl}}/api/v1/transactions"
+                    }
+                },
+                {
+                    "name": "Create - Invalid consumer address",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Status is 400 Bad Request', function () {",
+                                    "    pm.response.to.have.status(400);",
+                                    "});",
+                                    "",
+                                    "pm.test('Validation error mentions address', function () {",
+                                    "    const payload = JSON.stringify(pm.response.json()).toLowerCase();",
+                                    "    pm.expect(payload).to.match(/address|consumer/);",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"currency\": \"EUR\",\n  \"amount\": \"1\",\n  \"user\": {\n    \"id\": \"{{userId}}\"\n  },\n  \"consumer\": {\n    \"address\": \"not-an-address\"\n  }\n}"
+                        },
+                        "url": "{{baseUrl}}/api/v1/transactions"
+                    }
+                },
+                {
+                    "name": "Create - Missing required fields",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Status is 400 Bad Request', function () {",
+                                    "    pm.response.to.have.status(400);",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"currency\": \"EUR\"\n}"
+                        },
+                        "url": "{{baseUrl}}/api/v1/transactions"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Get Transaction",
+            "item": [
+                {
+                    "name": "Get - By ID (uses transactionId variable)",
+                    "event": [
+                        {
+                            "listen": "prerequest",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (!pm.collectionVariables.get('transactionId')) {",
+                                    "    throw new Error('transactionId is empty. Run \"Happy Path Flow > 1. Create Transaction\" first or set transactionId manually.');",
+                                    "}"
+                                ]
+                            }
+                        },
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Status is 200 OK', function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "pm.test('Response matches transactionId variable', function () {",
+                                    "    pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get('transactionId'));",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": "{{baseUrl}}/api/v1/transactions/{{transactionId}}"
+                    }
+                },
+                {
+                    "name": "Get - Not found",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Status is 404 Not Found', function () {",
+                                    "    pm.response.to.have.status(404);",
+                                    "});",
+                                    "",
+                                    "pm.test('Error message references transaction id', function () {",
+                                    "    const payload = JSON.stringify(pm.response.json()).toLowerCase();",
+                                    "    pm.expect(payload).to.include('not found');",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": "{{baseUrl}}/api/v1/transactions/{{unknownTransactionId}}"
+                    }
+                },
+                {
+                    "name": "Get - Invalid id format",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Status is 404 Not Found', function () {",
+                                    "    pm.response.to.have.status(404);",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": "{{baseUrl}}/api/v1/transactions/not-an-md5-id"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Submit Transaction",
+            "item": [
+                {
+                    "name": "Submit - No consumer address (400)",
+                    "event": [
+                        {
+                            "listen": "prerequest",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (!pm.collectionVariables.get('transactionId')) {",
+                                    "    throw new Error('transactionId is empty. Run \"Happy Path Flow > 1. Create Transaction\" first.');",
+                                    "}"
+                                ]
+                            }
+                        },
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Status is 400 Bad Request', function () {",
+                                    "    pm.response.to.have.status(400);",
+                                    "});",
+                                    "",
+                                    "pm.test('Error mentions consumer address', function () {",
+                                    "    const payload = JSON.stringify(pm.response.json()).toLowerCase();",
+                                    "    pm.expect(payload).to.include('consumer address');",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "url": "{{baseUrl}}/api/v1/transactions/{{transactionId}}/submit"
+                    }
+                },
+                {
+                    "name": "Submit - Not found (404)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Status is 404 Not Found', function () {",
+                                    "    pm.response.to.have.status(404);",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "url": "{{baseUrl}}/api/v1/transactions/{{unknownTransactionId}}/submit"
+                    }
+                },
+                {
+                    "name": "Submit - Valid (requires EVM)",
+                    "event": [
+                        {
+                            "listen": "prerequest",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (!pm.collectionVariables.get('transactionWithConsumerId')) {",
+                                    "    throw new Error('transactionWithConsumerId is empty. Run \"Happy Path Flow > 3. Create Transaction with Consumer\" first.');",
+                                    "}"
+                                ]
+                            }
+                        },
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Status is 200 OK or 503 when EVM is unavailable', function () {",
+                                    "    pm.expect(pm.response.code).to.be.oneOf([200, 503]);",
+                                    "});",
+                                    "",
+                                    "if (pm.response.code === 200) {",
+                                    "    const body = pm.response.json();",
+                                    "    pm.test('Transaction moves to PENDING with tx_hash', function () {",
+                                    "        pm.expect(body.status).to.eql('PENDING');",
+                                    "        pm.expect(body.tx_hash).to.match(/^0x[a-f0-9]{64}$/);",
+                                    "    });",
+                                    "}",
+                                    "",
+                                    "if (pm.response.code === 503) {",
+                                    "    pm.test('Service unavailable when EVM is not configured', function () {",
+                                    "        const payload = JSON.stringify(pm.response.json()).toLowerCase();",
+                                    "        pm.expect(payload).to.match(/unavailable|deploy/);",
+                                    "    });",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "url": "{{baseUrl}}/api/v1/transactions/{{transactionWithConsumerId}}/submit"
+                    }
+                },
+                {
+                    "name": "Submit - Already submitted (400)",
+                    "event": [
+                        {
+                            "listen": "prerequest",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (!pm.collectionVariables.get('transactionWithConsumerId')) {",
+                                    "    throw new Error('transactionWithConsumerId is empty. Run \"Happy Path Flow > 3. Create Transaction with Consumer\" first.');",
+                                    "}"
+                                ]
+                            }
+                        },
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Status is 400 Bad Request when not in CREATED status', function () {",
+                                    "    pm.response.to.have.status(400);",
+                                    "});",
+                                    "",
+                                    "pm.test('Error mentions status transition', function () {",
+                                    "    const payload = JSON.stringify(pm.response.json()).toLowerCase();",
+                                    "    pm.expect(payload).to.match(/cannot be submitted|status/);",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "url": "{{baseUrl}}/api/v1/transactions/{{transactionWithConsumerId}}/submit"
+                    }
+                }
+            ]
+        }
+    ]
+}

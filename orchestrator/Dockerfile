@@ -8,17 +8,18 @@ WORKDIR /app
 # Install all dependencies (cached layer shared by builder and test-runner)
 FROM base AS deps
 COPY package*.json ./
-RUN npm ci
+RUN npm ci --ignore-scripts
 
 # Compile application and generate Prisma client
 FROM deps AS builder
 COPY . .
+ENV DATABASE_URL="postgresql://postgres:postgres@localhost:5432/swap_db?schema=public"
 RUN npx prisma generate && npm run build
 
 # Production-only npm dependencies (no devDependencies)
 FROM base AS production-deps
 COPY package*.json ./
-RUN npm ci --omit=dev && npm install --omit=dev --no-save prisma@^7
+RUN npm ci --omit=dev --ignore-scripts && npm install --omit=dev --no-save prisma@^7
 
 # Production runtime — slim image for deploy and docker compose
 FROM production-deps AS production

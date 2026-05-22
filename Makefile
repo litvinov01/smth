@@ -81,8 +81,5 @@ test: test-unit ## Run unit tests (default test target)
 test-unit: ## Run unit tests on host
 	cd $(ORCHESTRATOR_DIR) && npm test
 
-test-e2e: ## Run e2e tests on host (run make test-init first)
-	cd $(ORCHESTRATOR_DIR) && npm run test:e2e
-
-test-e2e-docker: build-test-runner ## Run e2e tests inside test-runner container
+test-e2e: build-test-app build-test-runner ## Run e2e tests inside test-runner container (rebuilds app + runner images)
 	docker run --rm -v /var/run/docker.sock:/var/run/docker.sock $(IMAGE_NAME):test-runner

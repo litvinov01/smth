@@ -60,9 +60,8 @@ contract Transactor {
         }
     }
 
-    /// @notice Accept top-up deposits from the emitent only.
-    receive() external payable {
-        if (msg.sender != emitent) revert OnlyEmitent();
+    /// @notice Accept top-up deposits from the emitent only while the contract is open.
+    receive() external payable onlyEmitent whenOpen {
         if (msg.value == 0) revert ZeroAmount();
         emit Funded(msg.sender, msg.value);
     }

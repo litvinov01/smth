@@ -1,27 +1,39 @@
 import { Body, Get, Param, Post } from '@nestjs/common';
-import { V1 } from '../../../../shared/http/v1';
+import { V1Controller } from '../../../../shared/http/v1';
 import { TransactionService } from '../../../application/transaction.service';
+import { CreateTransactionV1Dto, TransactionIdParamDto } from './formatters/v1/transaction.v1.dto';
+import { CreateTransactionV1Formatter, TransactionResponseV1Formatter } from './formatters/v1/transaction.v1.formatter';
 import {
-  CreateTransactionV1Body,
-  CreateTransactionV1Formatter,
-  TransactionResponseV1Formatter,
-} from './formatters/v1/transaction.v1.formatter';
+    CreateTransactionDocs,
+    GetTransactionDocs,
+    SubmitTransactionDocs,
+    TransactionControllerDocs,
+} from './docs/transaction.docs';
 
-@V1('transactions', TransactionResponseV1Formatter)
+@TransactionControllerDocs
+@V1Controller('transactions', TransactionResponseV1Formatter)
 export class TransactionController {
-  constructor(
-    private readonly transactionService: TransactionService,
-    private readonly createTransactionV1Formatter: CreateTransactionV1Formatter,
-  ) {}
+    constructor(
+        private readonly transactionService: TransactionService,
+        private readonly createTransactionV1Formatter: CreateTransactionV1Formatter,
+    ) {}
 
-  @Post()
-  create(@Body() body: CreateTransactionV1Body) {
-    const command = this.createTransactionV1Formatter.parse(body);
-    return this.transactionService.create(command);
-  }
+    @CreateTransactionDocs
+    @Post()
+    create(@Body() body: CreateTransactionV1Dto) {
+        const command = this.createTransactionV1Formatter.parse(body);
+        return this.transactionService.create(command);
+    }
 
-  @Get(':id')
-  getById(@Param('id') id: string) {
-    return this.transactionService.getById(id);
-  }
+    @SubmitTransactionDocs
+    @Post(':id/submit')
+    submit(@Param() params: TransactionIdParamDto) {
+        return this.transactionService.submit(params.id);
+    }
+
+    @GetTransactionDocs
+    @Get(':id')
+    getById(@Param() params: TransactionIdParamDto) {
+        return this.transactionService.getById(params.id);
+    }
 }
