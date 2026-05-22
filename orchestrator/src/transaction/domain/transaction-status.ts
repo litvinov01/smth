@@ -1,0 +1,10 @@
+export const TRANSACTION_STATUS = {
+  CREATED: 'CREATED',
+  FAILED: 'FAILED',
+  SUCCESS: 'SUCCESS',
+} as const;
+
+export type TransactionStatus =
+  (typeof TRANSACTION_STATUS)[keyof typeof TRANSACTION_STATUS];
+
+export const INITIAL_TRANSACTION_STATUS = TRANSACTION_STATUS.CREATED;

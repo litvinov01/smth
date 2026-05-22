@@ -1,0 +1,12 @@
+{
+  "name": "swap",
+  "private": true,
+  "scripts": {
+    "prepare": "husky",
+    "test": "make test-unit",
+    "test:unit": "make test-unit"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7"
+  }
+}

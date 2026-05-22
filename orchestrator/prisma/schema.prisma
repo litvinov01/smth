@@ -1,15 +1,29 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "../generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
-model BasicEntity {
-  id Int @id @default(autoincrement())
+/// User identity (md5 hex). `transactions` is an ORM relation, not a DB column.
+model User {
+  id           String        @id @db.Char(32)
+  transactions Transaction[]
+
+  @@map("users")
+}
+
+model Transaction {
+  id        String   @id @db.Char(32)
+  currency  String   @db.VarChar(3)
+  status    String   @db.VarChar(16)
+  amount    Decimal  @db.Decimal(18, 8)
+  createdAt DateTime @default(now()) @map("created_at")
+  userId    String   @map("user_id") @db.Char(32)
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("transactions")
 }

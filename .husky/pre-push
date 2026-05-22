@@ -1,0 +1,9 @@
+#!/usr/bin/env sh
+set -e
+
+if [ ! -d orchestrator/node_modules/jest ]; then
+  echo "orchestrator dependencies missing — run: cd orchestrator && npm install"
+  exit 1
+fi
+
+make test-unit
