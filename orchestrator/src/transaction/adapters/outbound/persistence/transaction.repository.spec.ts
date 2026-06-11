@@ -3,10 +3,10 @@ import { Prisma } from '../../../../../generated/prisma/client';
 import { PrismaService } from '../../../../prisma/prisma.service';
 import { TRANSACTION_STATUS } from '../../../domain/transaction-status';
 import { EvmAddress } from '../../../domain/transaction.entity';
-import { PrismaTransactionRepository } from './prisma-transaction.repository';
+import { TransactionRepository } from './transaction.repository';
 
-describe('PrismaTransactionRepository', () => {
-    let repository: PrismaTransactionRepository;
+describe('TransactionRepository', () => {
+    let repository: TransactionRepository;
     let prisma: {
         user: { upsert: jest.Mock };
         transaction: {
@@ -15,11 +15,12 @@ describe('PrismaTransactionRepository', () => {
             findFirst: jest.Mock;
             findMany: jest.Mock;
             update: jest.Mock;
+            updateMany: jest.Mock;
         };
     };
 
-    const userId = 'fedcba9876543210fedcba9876543210';
-    const transactionId = 'a1b2c3d4e5f6789012345678901234ab';
+    const userId = '018f5e30-8c4a-7b3e-b3d1-8b4e7f6a5d4e';
+    const transactionId = '018f5e30-8c4a-7b3e-b3d1-8b4e7f6a5d4c';
     const createdAt = new Date('2025-05-22T12:00:00.000Z');
     const consumerAddress = '0x70997970c51812dc3a010c7d01b50e0d17dc79c8' as EvmAddress;
 
@@ -33,6 +34,7 @@ describe('PrismaTransactionRepository', () => {
         consumerAddress,
         contractAddress: null,
         txHash: null,
+        deploymentClaimedAt: null,
         user: { id: userId },
     };
 
@@ -46,6 +48,7 @@ describe('PrismaTransactionRepository', () => {
         consumerAddress,
         contractAddress: null,
         txHash: null,
+        deploymentClaimedAt: null,
     };
 
     beforeEach(async () => {
@@ -57,14 +60,15 @@ describe('PrismaTransactionRepository', () => {
                 findFirst: jest.fn(),
                 findMany: jest.fn(),
                 update: jest.fn(),
+                updateMany: jest.fn(),
             },
         };
 
         const module: TestingModule = await Test.createTestingModule({
-            providers: [PrismaTransactionRepository, { provide: PrismaService, useValue: prisma }],
+            providers: [TransactionRepository, { provide: PrismaService, useValue: prisma }],
         }).compile();
 
-        repository = module.get(PrismaTransactionRepository);
+        repository = module.get(TransactionRepository);
     });
 
     describe('create', () => {
@@ -76,7 +80,7 @@ describe('PrismaTransactionRepository', () => {
                 consumerAddress,
             };
 
-            const result = await repository.create(command, transactionId);
+            const result = await repository.create(command);
 
             expect(prisma.user.upsert).toHaveBeenCalledWith({
                 where: { id: userId },
@@ -85,7 +89,6 @@ describe('PrismaTransactionRepository', () => {
             });
             expect(prisma.transaction.create).toHaveBeenCalledWith({
                 data: {
-                    id: transactionId,
                     currency: 'EUR',
                     status: TRANSACTION_STATUS.CREATED,
                     amount: expect.any(Prisma.Decimal),
@@ -106,7 +109,7 @@ describe('PrismaTransactionRepository', () => {
                 consumerAddress: mixedCaseAddress,
             };
 
-            await repository.create(command, transactionId);
+            await repository.create(command);
 
             expect(prisma.transaction.create).toHaveBeenCalledWith(
                 expect.objectContaining({
@@ -164,6 +167,77 @@ describe('PrismaTransactionRepository', () => {
             });
             expect(result.status).toBe(TRANSACTION_STATUS.PENDING);
             expect(result.txHash).toBe('0xabc123');
+        });
+    });
+
+    describe('claimDeploymentBroadcast', () => {
+        const claimTxHash = '0x0000000000000000000000000000000000000000000000000000000000000000';
+
+        it('sets sentinel tx hash and claim timestamp atomically', async () => {
+            prisma.transaction.updateMany.mockResolvedValue({ count: 1 });
+
+            const result = await repository.claimDeploymentBroadcast(transactionId, claimTxHash);
+
+            expect(result).toBe(true);
+            expect(prisma.transaction.updateMany).toHaveBeenCalledWith({
+                where: { id: transactionId, status: TRANSACTION_STATUS.CREATED, txHash: null },
+                data: { txHash: claimTxHash, deploymentClaimedAt: expect.any(Date) },
+            });
+        });
+
+        it('returns false when another worker already claimed', async () => {
+            prisma.transaction.updateMany.mockResolvedValue({ count: 0 });
+
+            const result = await repository.claimDeploymentBroadcast(transactionId, claimTxHash);
+
+            expect(result).toBe(false);
+        });
+    });
+
+    describe('finalizeDeploymentBroadcast', () => {
+        const claimTxHash = '0x0000000000000000000000000000000000000000000000000000000000000000';
+        const realTxHash = '0xabc123';
+
+        it('moves to PENDING with real tx hash and clears claim timestamp', async () => {
+            prisma.transaction.updateMany.mockResolvedValue({ count: 1 });
+            prisma.transaction.findUnique.mockResolvedValue({
+                ...prismaRecord,
+                status: TRANSACTION_STATUS.PENDING,
+                txHash: realTxHash,
+                deploymentClaimedAt: null,
+            });
+
+            const result = await repository.finalizeDeploymentBroadcast(transactionId, claimTxHash, realTxHash);
+
+            expect(prisma.transaction.updateMany).toHaveBeenCalledWith({
+                where: { id: transactionId, status: TRANSACTION_STATUS.CREATED, txHash: claimTxHash },
+                data: { status: TRANSACTION_STATUS.PENDING, txHash: realTxHash, deploymentClaimedAt: null },
+            });
+            expect(result?.status).toBe(TRANSACTION_STATUS.PENDING);
+            expect(result?.txHash).toBe(realTxHash);
+        });
+
+        it('returns null when claim was lost', async () => {
+            prisma.transaction.updateMany.mockResolvedValue({ count: 0 });
+
+            const result = await repository.finalizeDeploymentBroadcast(transactionId, claimTxHash, realTxHash);
+
+            expect(result).toBeNull();
+        });
+    });
+
+    describe('releaseDeploymentBroadcastClaim', () => {
+        const claimTxHash = '0x0000000000000000000000000000000000000000000000000000000000000000';
+
+        it('clears sentinel tx hash and claim timestamp', async () => {
+            prisma.transaction.updateMany.mockResolvedValue({ count: 1 });
+
+            await repository.releaseDeploymentBroadcastClaim(transactionId, claimTxHash);
+
+            expect(prisma.transaction.updateMany).toHaveBeenCalledWith({
+                where: { id: transactionId, status: TRANSACTION_STATUS.CREATED, txHash: claimTxHash },
+                data: { txHash: null, deploymentClaimedAt: null },
+            });
         });
     });
 });

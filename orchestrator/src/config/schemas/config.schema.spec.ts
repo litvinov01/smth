@@ -14,6 +14,20 @@ describe('configSchema', () => {
         expect(config.evm.enabled).toBe(false);
         expect(config.evm.chainId).toBe(31337);
         expect(config.evm.pollIntervalMs).toBe(10_000);
+        expect(config.messaging.enabled).toBe(false);
+        expect(config.messaging.processRole).toBe('all');
+    });
+
+    it('enables messaging when Kafka is configured', () => {
+        const config = loadConfig({
+            ...baseEnv,
+            KAFKA_BROKERS: 'localhost:9092',
+            PROCESS_ROLE: 'worker',
+        });
+
+        expect(config.messaging.enabled).toBe(true);
+        expect(config.messaging.kafka.brokers).toEqual(['localhost:9092']);
+        expect(config.messaging.processRole).toBe('worker');
     });
 
     it('normalizes optional EVM settings and marks enabled when complete', () => {

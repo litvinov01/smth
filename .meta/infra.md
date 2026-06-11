@@ -1,6 +1,6 @@
 # Infrastructure
 
-Local development runs two containers via Docker Compose: the **orchestrator** (Node.js / NestJS) and **PostgreSQL**.
+Local development runs three containers via Docker Compose: the **orchestrator** (Node.js / NestJS), **PostgreSQL**, and **Redpanda** (Kafka-compatible messaging).
 
 ## Architecture
 
@@ -8,10 +8,12 @@ Local development runs two containers via Docker Compose: the **orchestrator** (
 flowchart LR
   Client -->|HTTP :3000/api| Orchestrator
   Orchestrator -->|DATABASE_URL| PostgreSQL
+  Orchestrator -->|KAFKA_BROKERS| Redpanda
   PostgreSQL[(postgres_data volume)]
   subgraph swap-net["swap-net (bridge)"]
     Orchestrator
     PostgreSQL
+    Redpanda
   end
 ```
 
@@ -21,6 +23,7 @@ flowchart LR
 |---------|---------------|-----------|---------|
 | `orchestrator` | Build `orchestrator/Dockerfile` target `production` | `3000` | NestJS API (Fastify), global prefix `/api` |
 | `db` | `postgres:16-alpine` | `5432` | PostgreSQL 16 |
+| `redpanda` | `redpandadata/redpanda:v24.2.4` | `9092` | Kafka-compatible event bus |
 
 The orchestrator container runs `prisma migrate deploy` on startup, then starts the compiled NestJS app.
 
@@ -54,7 +57,7 @@ E2e tests live in `orchestrator/test/` and spin up PostgreSQL + the `test-app` i
 
 ## Docker network
 
-All compose services join a named bridge network so containers resolve each other by service name (`db`, `orchestrator`).
+All compose services join a named bridge network so containers resolve each other by service name (`db`, `orchestrator`, `redpanda`).
 
 | Setting | Default | Description |
 |---------|---------|-------------|
@@ -82,13 +85,18 @@ Copy from [`.env.example`](../.env.example):
 | `POSTGRES_DB` | `swap_db` | Database name |
 | `POSTGRES_PORT` | `5432` | Host port for PostgreSQL |
 | `ORCHESTRATOR_PORT` | `3000` | Host port for the API |
+| `KAFKA_PORT` | `9092` | Host port for Redpanda/Kafka |
 | `DOCKER_NETWORK` | `swap-net` | Shared Docker network name |
 
 Inside Compose, the orchestrator receives:
 
 ```
 DATABASE_URL=postgresql://<user>:<password>@db:5432/<db>?schema=public
+KAFKA_BROKERS=redpanda:9092
+PROCESS_ROLE=all
 ```
+
+See `orchestrator/.example.env` for optional messaging tuning (`KAFKA_CLIENT_ID`, check delays, consumer retries, deployment claim TTL).
 
 ### Local development (without Docker)
 
@@ -96,9 +104,10 @@ Copy `orchestrator/.example.env` to `orchestrator/.env`:
 
 ```
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/swap_db?schema=public"
+KAFKA_BROKERS="localhost:9092"
 ```
 
-Use this when running `npm run start:dev` on the host while only the `db` service runs in Docker.
+Use this when running `npm run start:dev` on the host while only the `db` and `redpanda` services run in Docker.
 
 ## Volumes
 
@@ -111,6 +120,7 @@ Removing volumes (`make clean`) deletes all local database data.
 ## Health checks
 
 - **db**: `pg_isready` — orchestrator starts only after the database is healthy.
+- **redpanda**: `rpk cluster health` — orchestrator starts only after the broker is healthy.
 
 ## Useful commands
 
@@ -140,7 +150,8 @@ make test-e2e
 |--------|------|-------------|
 | `GET` | `/api` | Health/hello response |
 | `POST` | `/api/v1/transactions` | Create transaction (status `CREATED`) |
-| `GET` | `/api/v1/transactions/:id` | Read transaction by md5 id |
+| `GET` | `/api/v1/transactions/:id` | Read transaction by UUID |
+| `POST` | `/api/v1/transactions/:id/submit` | Submit transaction for on-chain deployment |
 
 ## Tech stack
 
@@ -148,3 +159,4 @@ make test-e2e
 - **Framework**: NestJS 11 + Fastify 5
 - **ORM**: Prisma 5
 - **Database**: PostgreSQL 16
+- **Messaging**: Redpanda (Kafka protocol)

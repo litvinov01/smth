@@ -100,8 +100,9 @@ export class ViemTransactorAdapter implements TransactorPort {
 
         return logs
             .map((log) => log.eventName)
-            .filter((eventName): eventName is 'Fulfilled' | 'Cancelled' =>
-                eventName === 'Fulfilled' || eventName === 'Cancelled',
+            .filter(
+                (eventName): eventName is 'Fulfilled' | 'Cancelled' =>
+                    eventName === 'Fulfilled' || eventName === 'Cancelled',
             )
             .map((eventName) => (eventName === 'Fulfilled' ? 'fulfilled' : 'cancelled'));
     }

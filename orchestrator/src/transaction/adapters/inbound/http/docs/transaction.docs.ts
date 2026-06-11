@@ -33,8 +33,8 @@ export const SubmitTransactionDocs = createDocs([...transactionEndpointCommonDoc
     }),
     ApiParam({
         name: 'id',
-        description: '32-character MD5 hex transaction identifier',
-        example: 'a1b2c3d4e5f6789012345678901234ab',
+        description: 'UUID v7 transaction identifier',
+        example: '018f5e30-8c4a-7b3e-b3d1-8b4e7f6a5d4c',
     }),
     ApiOkResponse({
         description: 'Transaction submitted; deployment pending on chain',
@@ -49,8 +49,8 @@ export const GetTransactionDocs = createDocs([...transactionEndpointCommonDocs, 
     }),
     ApiParam({
         name: 'id',
-        description: '32-character MD5 hex transaction identifier',
-        example: 'a1b2c3d4e5f6789012345678901234ab',
+        description: 'UUID v7 transaction identifier',
+        example: '018f5e30-8c4a-7b3e-b3d1-8b4e7f6a5d4c',
     }),
     ApiOkResponse({
         description: 'Transaction found',

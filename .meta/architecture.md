@@ -78,7 +78,7 @@ export class TransactionController {
 ## Naming
 
 - Port: `TransactionRepositoryPort` (interface in `domain/ports/`)
-- Adapter: `PrismaTransactionRepository` (implements port)
+- Adapter: `TransactionRepository` (implements port)
 - Formatter: `CreateTransactionV1Formatter`, `TransactionResponseV1Formatter`
 - Service: `TransactionService` (application layer)
 

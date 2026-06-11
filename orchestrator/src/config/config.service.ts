@@ -21,4 +21,18 @@ export class AppConfigService {
     get evm(): EvmConfig {
         return this.config.evm;
     }
+
+    get messaging(): AppConfig['messaging'] {
+        return this.config.messaging;
+    }
+
+    get runsApi(): boolean {
+        const role = this.config.messaging.processRole;
+        return role === 'api' || role === 'all';
+    }
+
+    get runsWorkers(): boolean {
+        const role = this.config.messaging.processRole;
+        return role === 'worker' || role === 'all';
+    }
 }
