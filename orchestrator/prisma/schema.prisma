@@ -7,25 +7,25 @@ datasource db {
   provider = "postgresql"
 }
 
-/// User identity (md5 hex). `transactions` is an ORM relation, not a DB column.
 model User {
-  id           String        @id @db.Char(32)
+  id           String        @id @db.Uuid
   transactions Transaction[]
 
   @@map("users")
 }
 
 model Transaction {
-  id              String   @id @db.Char(32)
+  id              String   @id @default(uuid(7)) @db.Uuid
   currency        String   @db.VarChar(3)
   status          String   @db.VarChar(16)
   amount          Decimal  @db.Decimal(18, 8)
   createdAt       DateTime @default(now()) @map("created_at")
-  userId          String   @map("user_id") @db.Char(32)
+  userId          String   @map("user_id") @db.Uuid
   consumerAddress String?  @map("consumer_address") @db.Char(42)
   contractAddress String?  @map("contract_address") @db.Char(42)
-  txHash          String?  @map("tx_hash") @db.Char(66)
-  user            User     @relation(fields: [userId], references: [id])
+  txHash               String?   @map("tx_hash") @db.Char(66)
+  deploymentClaimedAt  DateTime? @map("deployment_claimed_at")
+  user                 User      @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([contractAddress])

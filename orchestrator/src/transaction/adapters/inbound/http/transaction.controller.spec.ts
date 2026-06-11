@@ -11,15 +11,16 @@ describe('TransactionController', () => {
     let createTransactionV1Formatter: jest.Mocked<Pick<CreateTransactionV1Formatter, 'parse'>>;
 
     const sampleTransaction: Transaction = {
-        id: 'a1b2c3d4e5f6789012345678901234ab',
+        id: '018f5e30-8c4a-7b3e-b3d1-8b4e7f6a5d4c',
         currency: 'EUR',
         status: TRANSACTION_STATUS.CREATED,
         amount: '100.50',
         createdAt: new Date('2025-05-22T12:00:00.000Z'),
-        user: { id: 'fedcba9876543210fedcba9876543210' },
+        user: { id: '018f5e30-8c4a-7b3e-b3d1-8b4e7f6a5d4e' },
         consumerAddress: '0x70997970c51812dc3a010c7d01b50e0d17dc79c8',
         contractAddress: null,
         txHash: null,
+        deploymentClaimedAt: null,
     };
 
     beforeEach(async () => {

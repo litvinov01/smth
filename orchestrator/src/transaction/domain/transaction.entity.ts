@@ -17,6 +17,7 @@ export interface Transaction {
     consumerAddress: EvmAddress | null;
     contractAddress: EvmAddress | null;
     txHash: EvmTxHash | null;
+    deploymentClaimedAt: Date | null;
 }
 
 export interface CreateTransactionCommand {

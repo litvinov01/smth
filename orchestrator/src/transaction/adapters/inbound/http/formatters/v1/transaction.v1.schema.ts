@@ -2,16 +2,17 @@ import { z } from 'zod';
 import { TRANSACTION_STATUS } from '../../../../../domain/transaction-status';
 import {
     evmAddressBodySchema,
+    evmTxHashSchema,
     isoCurrencySchema,
-    md5HexSchema,
     positiveDecimalAmountSchema,
+    uuidSchema,
 } from '../../../../../../shared/validation/fields.schema';
 
 export const createTransactionV1Schema = z.object({
     currency: isoCurrencySchema,
     amount: positiveDecimalAmountSchema,
     user: z.object({
-        id: md5HexSchema,
+        id: uuidSchema,
     }),
     consumer: z
         .object({
@@ -21,7 +22,7 @@ export const createTransactionV1Schema = z.object({
 });
 
 export const transactionIdParamSchema = z.object({
-    id: md5HexSchema,
+    id: uuidSchema,
 });
 
 const transactionStatusSchema = z.enum([
@@ -32,16 +33,14 @@ const transactionStatusSchema = z.enum([
     TRANSACTION_STATUS.FAILED,
 ]);
 
-const evmTxHashSchema = z.string().regex(/^0x[a-fA-F0-9]{64}$/, 'Must be a 0x-prefixed 32-byte hex hash');
-
 export const transactionV1ResponseSchema = z.object({
-    id: md5HexSchema,
+    id: uuidSchema,
     currency: isoCurrencySchema,
     status: transactionStatusSchema,
     amount: z.string(),
     created_at: z.string().datetime(),
     user: z.object({
-        id: md5HexSchema,
+        id: uuidSchema,
     }),
     consumer_address: evmAddressBodySchema.nullable(),
     contract_address: evmAddressBodySchema.nullable(),

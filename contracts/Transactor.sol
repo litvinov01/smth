@@ -7,7 +7,7 @@ pragma solidity ^0.8.20;
 contract Transactor {
     address public immutable emitent;
 
-    address public consumer;
+    address public immutable consumer;
     uint256 public remainingAmount;
     bool public closed;
 
@@ -50,6 +50,7 @@ contract Transactor {
     constructor(address _consumer, uint256 amount) payable {
         if (_consumer == address(0)) revert ZeroAddress();
         if (amount == 0) revert ZeroAmount();
+        if (msg.value < amount) revert InsufficientBalance();
 
         emitent = msg.sender;
         consumer = _consumer;

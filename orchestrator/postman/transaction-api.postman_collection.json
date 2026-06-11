@@ -12,7 +12,7 @@
         },
         {
             "key": "userId",
-            "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            "value": "018f5e30-8c4a-7b3e-b3d1-000000000001"
         },
         {
             "key": "consumerAddress",
@@ -28,7 +28,7 @@
         },
         {
             "key": "unknownTransactionId",
-            "value": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+            "value": "018f5e30-8c4a-7b3e-b3d1-000000000001"
         }
     ],
     "item": [
@@ -55,7 +55,7 @@
                                     "const body = pm.response.json();",
                                     "",
                                     "pm.test('Transaction shape is valid', function () {",
-                                    "    pm.expect(body.id).to.match(/^[a-f0-9]{32}$/);",
+                                    "    pm.expect(body.id).to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);",
                                     "    pm.expect(body.currency).to.eql('EUR');",
                                     "    pm.expect(body.status).to.eql('CREATED');",
                                     "    pm.expect(body.amount).to.eql('100.5');",
@@ -132,7 +132,7 @@
                                     "const body = pm.response.json();",
                                     "",
                                     "pm.test('Consumer address is persisted', function () {",
-                                    "    pm.expect(body.id).to.match(/^[a-f0-9]{32}$/);",
+                                    "    pm.expect(body.id).to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);",
                                     "    pm.expect(body.consumer_address).to.eql(pm.collectionVariables.get('consumerAddress').toLowerCase());",
                                     "    pm.expect(body.status).to.eql('CREATED');",
                                     "});",
@@ -353,9 +353,9 @@
                                     "    pm.response.to.have.status(400);",
                                     "});",
                                     "",
-                                    "pm.test('Validation error mentions md5', function () {",
+                                    "pm.test('Validation error mentions user id', function () {",
                                     "    const payload = JSON.stringify(pm.response.json()).toLowerCase();",
-                                    "    pm.expect(payload).to.match(/md5|user/);",
+                                    "    pm.expect(payload).to.match(/uuid|user/);",
                                     "});"
                                 ]
                             }
@@ -516,8 +516,8 @@
                             "script": {
                                 "type": "text/javascript",
                                 "exec": [
-                                    "pm.test('Status is 404 Not Found', function () {",
-                                    "    pm.response.to.have.status(404);",
+                                    "pm.test('Status is 400 Bad Request', function () {",
+                                    "    pm.response.to.have.status(400);",
                                     "});"
                                 ]
                             }
@@ -526,7 +526,7 @@
                     "request": {
                         "method": "GET",
                         "header": [],
-                        "url": "{{baseUrl}}/api/v1/transactions/not-an-md5-id"
+                        "url": "{{baseUrl}}/api/v1/transactions/not-a-uuid"
                     }
                 }
             ]

@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { V1ResponseFormatter } from '../../../../../../shared/http/v1';
+import { isDeploymentClaimTxHash } from '../../../../../domain/deployment-claim';
 import { CreateTransactionCommand, EvmAddress, Transaction } from '../../../../../domain/transaction.entity';
 import { CreateTransactionV1Input } from './transaction.v1.schema';
 
@@ -39,7 +40,7 @@ export class TransactionResponseV1Formatter implements V1ResponseFormatter<Trans
             user: { id: transaction.user.id },
             consumer_address: transaction.consumerAddress,
             contract_address: transaction.contractAddress,
-            tx_hash: transaction.txHash,
+            tx_hash: transaction.txHash && !isDeploymentClaimTxHash(transaction.txHash) ? transaction.txHash : null,
         };
     }
 }

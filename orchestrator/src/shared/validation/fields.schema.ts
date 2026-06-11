@@ -2,11 +2,20 @@ import { z } from 'zod';
 
 export const ON_CHAIN_AMOUNT_DECIMALS = 8;
 
-export const md5HexSchema = z
+export const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+export const UUID_V7_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+
+export const uuidSchema = z
     .string({ required_error: 'Must be a string' })
     .trim()
     .transform((value) => value.toLowerCase())
-    .pipe(z.string().regex(/^[a-f0-9]{32}$/, 'Must be a 32-character md5 hex string'));
+    .pipe(z.string().regex(UUID_REGEX, 'Must be a UUID'));
+
+export const uuidV7Schema = z
+    .string({ required_error: 'Must be a string' })
+    .trim()
+    .transform((value) => value.toLowerCase())
+    .pipe(z.string().regex(UUID_V7_REGEX, 'Must be a UUID v7'));
 
 export const isoCurrencySchema = z
     .string({ required_error: 'currency must be a string' })
@@ -52,3 +61,9 @@ export const evmAddressBodySchema = z
     .trim()
     .transform((value) => value.toLowerCase())
     .pipe(z.string().regex(/^0x[a-f0-9]{40}$/, 'Must be a 0x-prefixed 20-byte hex address'));
+
+export const evmTxHashSchema = z
+    .string()
+    .trim()
+    .transform((value) => value.toLowerCase())
+    .pipe(z.string().regex(/^0x[a-f0-9]{64}$/, 'Must be a 0x-prefixed 32-byte hex hash'));

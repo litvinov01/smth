@@ -4,7 +4,7 @@ import * as path from 'path';
 
 const POSTGRES_HOST = 'db';
 const POSTGRES_PORT = 5432;
-const TEST_USER_ID = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+const TEST_USER_ID = '018f5e30-8c4a-7b3e-b3d1-000000000001';
 
 describe('Orchestrator (e2e with Testcontainers)', () => {
     let network: StartedNetwork;
@@ -77,7 +77,7 @@ describe('Orchestrator (e2e with Testcontainers)', () => {
             amount: '100.5',
             user: { id: TEST_USER_ID },
         });
-        expect(created.id).toMatch(/^[a-f0-9]{32}$/);
+        expect(created.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
         expect(created.created_at).toBeDefined();
 
         const getResponse = await fetch(`${baseUrl}/api/v1/transactions/${created.id}`);
@@ -88,7 +88,7 @@ describe('Orchestrator (e2e with Testcontainers)', () => {
     });
 
     it('GET /api/v1/transactions/:id returns 404 for unknown id', async () => {
-        const response = await fetch(`${baseUrl}/api/v1/transactions/${'b'.repeat(32)}`);
+        const response = await fetch(`${baseUrl}/api/v1/transactions/018f5e30-8c4a-7b3e-b3d1-000000000001`);
 
         expect(response.status).toBe(404);
     });
