@@ -4,10 +4,14 @@ DOCKERFILE := $(ORCHESTRATOR_DIR)/Dockerfile
 IMAGE_NAME ?= swap-orchestrator
 DOCKER_NETWORK ?= swap-net
 TEST_INIT := .meta/skills/test-init/scripts/test-init.sh
+AGENT_DIR := agent smith
+AGENT_VENV := $(AGENT_DIR)/.venv
+PYTHON ?= python3
 
 .PHONY: help bootstrap up down build rebuild logs ps restart clean migrate db-shell
 .PHONY: build-prod build-test-app build-test-runner build-images
 .PHONY: test-init test test-unit test-e2e test-e2e-docker network-create prisma-generate
+.PHONY: agent-init agent agent-reindex agent-build agent-docker
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z0-9_-]+:.*##' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
@@ -83,3 +87,21 @@ test-unit: ## Run unit tests on host
 
 test-e2e: build-test-app build-test-runner ## Run e2e tests inside test-runner container (rebuilds app + runner images)
 	docker run --rm -v /var/run/docker.sock:/var/run/docker.sock $(IMAGE_NAME):test-runner
+
+agent-init: ## Set up Agent Smith on host: venv, deps, .env
+	@test -d "$(AGENT_VENV)" || $(PYTHON) -m venv "$(AGENT_VENV)"
+	@"$(AGENT_VENV)/bin/pip" install --quiet -r "$(AGENT_DIR)/requirements.txt"
+	@test -f "$(AGENT_DIR)/.env" || cp "$(AGENT_DIR)/.example.env" "$(AGENT_DIR)/.env"
+	@echo "Agent Smith ready. Set OPENAI_API_KEY in '$(AGENT_DIR)/.env', then run: make agent"
+
+agent: ## Run Agent Smith on host (interactive; one-shot: make agent q="your question")
+	@cd "$(AGENT_DIR)" && .venv/bin/python main.py $(if $(q),"$(q)")
+
+agent-reindex: ## Rebuild the Agent Smith knowledge index
+	@cd "$(AGENT_DIR)" && .venv/bin/python main.py --rebuild < /dev/null
+
+agent-build: ## Build the Agent Smith Docker image
+	$(COMPOSE) build agent-smith
+
+agent-docker: ## Run Agent Smith in a container (one-shot: make agent-docker q="your question")
+	$(COMPOSE) run --rm agent-smith $(if $(q),"$(q)")

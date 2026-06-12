@@ -73,6 +73,24 @@ services:
       redpanda:
         condition: service_healthy
 
+  agent-smith:
+    build:
+      context: "./agent smith"
+      dockerfile: Dockerfile
+    profiles:
+      - agent
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      AGENT_SMITH_LLM_MODEL: ${AGENT_SMITH_LLM_MODEL:-gpt-4o-mini}
+      AGENT_SMITH_EMBEDDING_MODEL: ${AGENT_SMITH_EMBEDDING_MODEL:-text-embedding-3-small}
+    volumes:
+      - .:/repo:ro
+      - agent_smith_index:/app/.storage
+    networks:
+      - swap-net
+    stdin_open: true
+    tty: true
+
 networks:
   swap-net:
     name: ${DOCKER_NETWORK:-swap-net}
@@ -80,3 +98,4 @@ networks:
 
 volumes:
   postgres_data:
+  agent_smith_index:
