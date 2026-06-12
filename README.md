@@ -23,7 +23,8 @@ See [.meta/bootstrap.md](./.meta/bootstrap.md) for detailed onboarding.
 │   └── skills/             # Agent skills (SKILL.md + scripts per workflow)
 ├── orchestrator/           # Backend (NestJS + Fastify + PostgreSQL + Prisma)
 ├── contracts/              # Solidity contracts (on-chain settlement)
-├── docker-compose.yml      # Local stack: orchestrator + PostgreSQL
+├── agent smith/            # Internal RAG assistant for contributors (LlamaIndex)
+├── docker-compose.yml      # Local stack: orchestrator + PostgreSQL + Redpanda
 ├── Makefile                # Common dev and ops commands
 └── README.md
 ```
@@ -42,6 +43,25 @@ See [.meta/bootstrap.md](./.meta/bootstrap.md) for detailed onboarding.
 | `make test-e2e` | Run e2e tests with Testcontainers |
 | `make clean` | Remove containers and DB volume |
 
+## Agent Smith — ask the repo anything
+
+New to the project? [Agent Smith](./agent%20smith/README.md) is an internal RAG assistant that indexes this repository (`.meta` docs, orchestrator source, Prisma schema, contracts) and answers contributor questions like *"how does a transaction reach FUNDED?"* or *"what does `make test-init` do?"*. It needs an `OPENAI_API_KEY` (see its README for setup).
+
+```bash
+# host (one-time setup, then chat)
+make agent-init
+make agent                                    # interactive
+make agent q="How does settlement checking work?"   # one-shot
+
+# or fully containerized (key goes in the root .env)
+make agent-build
+make agent-docker q="What services run in docker compose?"
+
+make agent-reindex   # refresh the index after docs/code change
+```
+
+The agent is isolated from the swap stack: it runs on demand only (compose profile `agent`), mounts the repo read-only, and keeps its vector index in a local volume.
+
 ## Documentation
 
 | Topic | Location |
@@ -53,6 +73,7 @@ See [.meta/bootstrap.md](./.meta/bootstrap.md) for detailed onboarding.
 | Agent skills | [.meta/skills/README.md](./.meta/skills/README.md) |
 | Orchestrator app | [orchestrator/README.md](./orchestrator/README.md) |
 | On-chain contracts | [contracts/README.md](./contracts/README.md) |
+| Agent Smith (RAG assistant) | [agent smith/README.md](./agent%20smith/README.md) |
 
 ## Scope
 
