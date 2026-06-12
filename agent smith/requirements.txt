@@ -1,0 +1,4 @@
+# llama-index >=0.13 ships 3.10+ syntax despite its metadata; keep 0.12.x for 3.9 hosts.
+llama-index>=0.12,<0.13; python_version < "3.10"
+llama-index>=0.12; python_version >= "3.10"
+python-dotenv>=1.0
