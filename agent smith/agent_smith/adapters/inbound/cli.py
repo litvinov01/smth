@@ -14,7 +14,7 @@ BANNER = (
 )
 
 
-def run(assistant: ContributorAssistant, argv: Optional[List[str]] = None) -> int:
+def run(assistant: ContributorAssistant, argv: Optional[List[str]] = None, areas: Optional[List[str]] = None) -> int:
     """CLI entry point. The only module that knows about argv/stdin/stdout —
     swap this adapter (e.g. for HTTP or Slack) without touching the rest."""
     parser = argparse.ArgumentParser(
@@ -24,6 +24,12 @@ def run(assistant: ContributorAssistant, argv: Optional[List[str]] = None) -> in
     parser.add_argument("question", nargs="?", help="one-shot question; omit for interactive mode")
     parser.add_argument("--rebuild", action="store_true", help="re-index the repository before answering")
     parser.add_argument("--no-sources", action="store_true", help="hide the source fragments under each answer")
+    parser.add_argument(
+        "--area",
+        choices=areas or None,
+        help="override autodetection and force a single area"
+        + (f" ({', '.join(areas)})" if areas else ""),
+    )
     args = parser.parse_args(argv)
 
     if args.rebuild:
@@ -32,13 +38,13 @@ def run(assistant: ContributorAssistant, argv: Optional[List[str]] = None) -> in
         print("Index rebuilt.\n")
 
     if args.question:
-        _print_answer(assistant.ask(args.question), show_sources=not args.no_sources)
+        _print_answer(assistant.ask(args.question, area=args.area), show_sources=not args.no_sources)
         return 0
 
-    return _interactive_loop(assistant, show_sources=not args.no_sources)
+    return _interactive_loop(assistant, show_sources=not args.no_sources, area=args.area)
 
 
-def _interactive_loop(assistant: ContributorAssistant, show_sources: bool) -> int:
+def _interactive_loop(assistant: ContributorAssistant, show_sources: bool, area: Optional[str]) -> int:
     print(BANNER)
     while True:
         try:
@@ -53,12 +59,20 @@ def _interactive_loop(assistant: ContributorAssistant, show_sources: bool) -> in
             return 0
 
         try:
-            _print_answer(assistant.ask(question), show_sources=show_sources)
+            _print_answer(assistant.ask(question, area=area), show_sources=show_sources)
         except Exception as error:  # keep the REPL alive on transient API errors
             print(f"error: {error}", file=sys.stderr)
 
 
 def _print_answer(answer: Answer, show_sources: bool) -> None:
+    if answer.areas:
+        print(f"\ndetected area(s): {', '.join(answer.areas)}")
+
+    for echo in answer.echoes:
+        print(f"\n--- code echo: {echo.file_path} (branch: {echo.branch}, lines {echo.start}-{echo.end}) ---")
+        print(echo.content)
+        print("---")
+
     print(f"\n{answer.text.strip()}\n")
 
     if show_sources and answer.sources:
