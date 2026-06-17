@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import logging
 from typing import Optional
 
 from ..domain.models import Answer
 from ..domain.ports import AreaClassifierPort, KnowledgeBasePort
+
+log = logging.getLogger("agent_smith.assistant")
 
 # Agent persona + operating instructions. Owned by the application layer (this is
 # "what Agent Smith is and how it should behave"), injected into whatever adapter
@@ -41,13 +44,16 @@ class ContributorAssistant:
         if area:
             # Manual override: skip autodetection entirely.
             areas: Optional[list] = [area]
+            log.info("area override: %s", area)
         elif self._classifier is not None:
             # Autodetect the target area(s) before retrieval; None -> let the KB
             # fall back to consulting everything.
             areas = self._classifier.classify(question) or None
+            log.info("autodetected areas: %s", areas)
         else:
             areas = None
 
+        log.info("asking knowledge base (question=%r)", question[:120])
         return self._knowledge_base.ask(question, areas=areas)
 
     def rebuild_knowledge(self) -> None:

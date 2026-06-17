@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import shutil
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -22,6 +23,9 @@ from llama_index.llms.openai import OpenAI
 from ...config import EXCLUDED_GLOBS, AgentConfig
 from ...domain.models import Answer, CodeEcho, SourceChunk
 from ...domain.ports import CodeNavigatorPort
+from .llamaindex_io import runtime as llamaindex_runtime
+
+log = logging.getLogger("agent_smith.knowledge_base")
 
 SNIPPET_MAX_CHARS = 240
 # LlamaIndex defaults to 5 tool rounds; with area search + code tools we need more
@@ -66,6 +70,10 @@ class LlamaIndexKnowledgeBase:
         Settings.chunk_size = config.chunk_size
 
     def ask(self, question: str, areas: Optional[List[str]] = None) -> Answer:
+        with llamaindex_runtime():
+            return self._ask(question, areas)
+
+    def _ask(self, question: str, areas: Optional[List[str]] = None) -> Answer:
         self._pending_echoes = []
         area_tools = self._get_area_tools()
 
@@ -78,8 +86,14 @@ class LlamaIndexKnowledgeBase:
         if not selected:
             selected = list(area_tools)
 
+        log.info("building agent for areas: %s", selected)
         agent = self._build_agent(selected)
         response = agent.chat(question)
+        log.info(
+            "agent finished (echoes=%d, source_nodes=%d)",
+            len(self._pending_echoes),
+            len(getattr(response, "source_nodes", []) or []),
+        )
 
         # When areas were pre-selected, report them (the autodetected domain);
         # otherwise derive from the tools the agent actually called.
@@ -92,10 +106,11 @@ class LlamaIndexKnowledgeBase:
         )
 
     def rebuild(self) -> None:
-        if self._config.storage_dir.exists():
-            shutil.rmtree(self._config.storage_dir)
-        self._indexes = self._build_indexes()
-        self._area_tools = None
+        with llamaindex_runtime():
+            if self._config.storage_dir.exists():
+                shutil.rmtree(self._config.storage_dir)
+            self._indexes = self._build_indexes()
+            self._area_tools = None
 
     # --- agent assembly ---------------------------------------------------
 
@@ -103,11 +118,12 @@ class LlamaIndexKnowledgeBase:
         area_tools = self._get_area_tools()
         tools: List = [area_tools[name] for name in area_names if name in area_tools]
         tools.extend(self._code_tools())
+        verbose = log.isEnabledFor(logging.INFO)
         return FunctionCallingAgent.from_tools(
             tools=tools,
             llm=Settings.llm,
             system_prompt=self._system_prompt,
-            verbose=False,
+            verbose=verbose,
             max_function_calls=MAX_FUNCTION_CALLS,
         )
 
@@ -160,6 +176,7 @@ class LlamaIndexKnowledgeBase:
         def echo_code(path: str, start: Optional[int] = None, end: Optional[int] = None) -> str:
             echo = navigator.echo_code(path, start=start, end=end)
             kb._pending_echoes.append(echo)
+            log.info("echo_code %s lines %s-%s branch %s", path, start, end, echo.branch)
             if echo.content.startswith("error:"):
                 return echo.content
             return (
