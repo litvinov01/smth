@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import math
 import re
 from typing import Dict, List, Optional
@@ -7,6 +8,8 @@ from typing import Dict, List, Optional
 from llama_index.embeddings.openai import OpenAIEmbedding
 
 from ...config import AgentConfig
+
+log = logging.getLogger("agent_smith.classifier")
 
 # "Where/how we create or implement something" spans application (use cases) first,
 # then domain (models/rules), then io (controllers/adapters). Rule-based so vague
@@ -42,6 +45,7 @@ class EmbeddingAreaClassifier:
 
         intent = self._intent_areas(question)
         if intent is not None:
+            log.info("routing via creation intent: %s", intent)
             return intent
 
         query_vector = self._embed.get_text_embedding(question)
@@ -62,6 +66,7 @@ class EmbeddingAreaClassifier:
                 break
             if top_score - score <= self._config.area_detect_margin:
                 selected.append(name)
+        log.info("routing via embeddings: %s", selected)
         return selected
 
     def _intent_areas(self, question: str) -> Optional[List[str]]:

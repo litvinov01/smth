@@ -58,6 +58,10 @@ python main.py --no-sources "What services run in docker compose?"
 
 # restrict the answer to a single area
 python main.py --area contracts "How does the claim work on-chain?"
+
+# agent diagnostics on stderr (LlamaIndex load, routing, tool calls)
+python main.py --logs-enabled
+make agent logs=1
 ```
 
 Per-area vector indexes are built on first run and persisted under `.storage/<area>/` (gitignored), with a small `.storage/areas.json` manifest; subsequent runs reuse them. Run with `--rebuild` whenever docs or code change significantly.
@@ -73,6 +77,7 @@ agent smith/
 ├── main.py                          # composition root (wires everything)
 └── agent_smith/
     ├── config.py                    # env-driven settings + area/topic definitions
+    ├── system_log.py                # diagnostics logging (stderr); quiet by default
     ├── domain/
     │   ├── models.py                # Answer, SourceChunk, Area, CodeReference
     │   └── ports.py                 # KnowledgeBasePort, CodeNavigatorPort
@@ -80,9 +85,11 @@ agent smith/
     │   └── assistant.py             # ContributorAssistant + agent persona (SYSTEM_PROMPT)
     └── adapters/
         ├── inbound/
-        │   └── cli.py               # CLI — the only module touching argv/stdin/stdout
-        └── outbound/
+        │   ├── cli.py               # argv/stdin orchestration
+        │   └── cli_io.py            # contributor-facing stdout (answers, echoes)
+            └── outbound/
             ├── llamaindex_knowledge_base.py  # per-area indexes + FunctionCallingAgent
+            ├── llamaindex_io.py              # LlamaIndex print/warning isolation (stderr if logs on)
             ├── embedding_area_classifier.py  # autodetects target area(s) before retrieval
             └── repo_code_navigator.py        # read-only repo scan behind CodeNavigatorPort
 ```

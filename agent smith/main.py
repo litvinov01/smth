@@ -7,6 +7,14 @@ from __future__ import annotations
 
 import sys
 
+from agent_smith.system_log import configure_from_argv
+
+_logs_enabled = configure_from_argv(sys.argv)
+
+from agent_smith.adapters.outbound.llamaindex_io import set_verbose
+
+set_verbose(_logs_enabled)
+
 from agent_smith.adapters.inbound import cli
 from agent_smith.adapters.outbound.embedding_area_classifier import EmbeddingAreaClassifier
 from agent_smith.adapters.outbound.llamaindex_knowledge_base import LlamaIndexKnowledgeBase

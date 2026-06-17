@@ -94,11 +94,11 @@ agent-init: ## Set up Agent Smith on host: venv, deps, .env
 	@test -f "$(AGENT_DIR)/.env" || cp "$(AGENT_DIR)/.example.env" "$(AGENT_DIR)/.env"
 	@echo "Agent Smith ready. Set OPENAI_API_KEY in '$(AGENT_DIR)/.env', then run: make agent"
 
-agent: ## Run Agent Smith on host (interactive; one-shot: make agent q="your question")
-	@cd "$(AGENT_DIR)" && .venv/bin/python main.py $(if $(q),"$(q)")
+agent: ## Run Agent Smith on host (interactive; one-shot: make agent q="your question"; logs: make agent logs=1)
+	@cd "$(AGENT_DIR)" && .venv/bin/python main.py $(if $(logs),--logs-enabled,) $(if $(q),"$(q)")
 
-agent-reindex: ## Rebuild the Agent Smith knowledge index
-	@cd "$(AGENT_DIR)" && .venv/bin/python main.py --rebuild < /dev/null
+agent-reindex: ## Rebuild the Agent Smith knowledge index (logs: make agent-reindex logs=1)
+	@cd "$(AGENT_DIR)" && .venv/bin/python main.py $(if $(logs),--logs-enabled,) --rebuild < /dev/null
 
 agent-build: ## Build the Agent Smith Docker image
 	$(COMPOSE) build agent-smith
