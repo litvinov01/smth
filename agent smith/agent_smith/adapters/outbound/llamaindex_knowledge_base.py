@@ -23,6 +23,7 @@ from llama_index.llms.openai import OpenAI
 from ...config import EXCLUDED_GLOBS, AgentConfig
 from ...domain.models import Answer, CodeEcho, SourceChunk
 from ...domain.ports import CodeNavigatorPort
+from .glossary_loader import load_glossary_documents
 from .llamaindex_io import runtime as llamaindex_runtime
 
 log = logging.getLogger("agent_smith.knowledge_base")
@@ -325,13 +326,27 @@ class LlamaIndexKnowledgeBase:
         if files:
             documents.extend(SimpleDirectoryReader(input_files=[str(path) for path in files]).load_data())
 
+        expanded: List[Document] = []
+        for document in documents:
+            file_path = document.metadata.get("file_path") or document.metadata.get("file_name") or ""
+            normalized = file_path.replace("\\", "/")
+            if normalized.endswith("/glossary/fintech.txt") or normalized.endswith("glossary/fintech.txt"):
+                path = Path(file_path)
+                rel = self._config.relative_path(path)
+                chunks = load_glossary_documents(path, rel)
+                log.info("expanded %s into %d section chunks", rel, len(chunks))
+                expanded.extend(chunks)
+            else:
+                expanded.append(document)
+
         # Files matching no area fall back to the last (catch-all docs) area so
         # nothing silently drops out of the index.
         fallback = self._config.area_names[-1]
         grouped: Dict[str, List[Document]] = {area.name: [] for area in self._config.areas}
-        for document in documents:
+        for document in expanded:
             file_path = document.metadata.get("file_path") or document.metadata.get("file_name") or ""
-            area = self._classify(file_path) or fallback
+            preset_area = document.metadata.get("area")
+            area = preset_area or self._classify(file_path) or fallback
             document.metadata["area"] = area
             grouped[area].append(document)
 

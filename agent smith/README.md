@@ -101,13 +101,22 @@ The corpus is partitioned into areas; each file is assigned to the **first** are
 | Area | What it holds |
 |------|---------------|
 | `contracts` | Solidity contracts + their docs (`contracts/**`, `**/*.sol`) |
+| `agent_smith` | The Agent Smith package itself (`agent smith/agent_smith/`, `main.py`, README) — routing, RAG, CLI, config |
 | `domain` | Entities, value objects, enums, ports (`**/domain/**`) |
 | `application` | Use cases, services, state transitions (`**/application/**`) |
 | `io` | Adapters, DI wiring, shared transport (`**/adapters/**`, `**/*.module.ts`, `**/shared/**`) |
 | `infra` | Compose, Makefile, Prisma schema, app config (`docker-compose.yml`, `Makefile`, `**/prisma/**`, `**/config/**`) |
+| `glossary` | Fintech domain terms (`agent smith/glossary/`) — `fintech.txt` is split into RAG chunks; `domain_prompt.txt` is injected into the system prompt |
 | `docs` | `.meta` guides + READMEs (catch-all for docs) |
 
 For each question, `EmbeddingAreaClassifier` embeds it once and cosine-ranks it against the area descriptions to pick the target area(s) (the top area plus any runner-up within `AGENT_SMITH_AUTODETECT_MARGIN`, capped at `AGENT_SMITH_AUTODETECT_TOP_K`). Only those `search_<area>` tools are handed to the agent, and the detection is printed above each answer (`detected area(s): domain, io`). Pass `--area <name>` to skip autodetection and force one area.
+
+### Glossary (`agent smith/glossary/`)
+
+- **`domain_prompt.txt`** — canonical definitions always injected into the system prompt (Transaction vs blockchain tx, Invoice, Quote, etc.).
+- **`fintech.txt`** — full domain glossary; at index time it is split into ~14 section chunks tagged with ids like `chunk_002_transactions_orders_invoices` (no CSV/pandas — section headers in the txt file drive chunking).
+
+Questions mentioning domain terms (invoice, order, quote, payment, …) autodetect to `glossary` + `application` + `domain`. Questions about Agent Smith itself (make agent, reindex, routing, tools) autodetect to `agent_smith` + `docs` + `infra`. **Reindex after corpus changes:** `make agent-reindex`.
 
 ### Code tools
 

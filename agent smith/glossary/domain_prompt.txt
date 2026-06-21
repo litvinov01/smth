@@ -1,0 +1,25 @@
+In this domain, a Transaction is the main internal lifecycle record for any value movement or swap operation.
+
+An Order represents the user's intent to perform a swap or payment.
+
+An Invoice is a payable request generated for a specific amount, currency, method, and expiration time.
+
+A Quote is a temporary price offer that defines the expected source amount, target amount, rate, fees, and TTL.
+
+A Payment is an incoming movement of funds from the user.
+
+A Payout is an outgoing movement of funds to the user.
+
+A Swap is the exchange of one asset into another.
+
+H2H means host-to-host server-side integration with a provider.
+
+Redirect means the user is sent to a provider-hosted page.
+
+Iframe means the provider checkout UI is embedded into the platform page.
+
+PCI DSS is the card data security standard. PCI scope depends on whether the platform stores, processes, or transmits cardholder data.
+
+Token is ambiguous and must be disambiguated: crypto token, card token, access token, or session token.
+
+A blockchain transaction is different from an internal business transaction. A blockchain transaction has a transaction hash and network confirmations.
