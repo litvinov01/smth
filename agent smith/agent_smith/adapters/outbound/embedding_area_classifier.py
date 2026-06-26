@@ -20,6 +20,18 @@ _CREATION_INTENT = re.compile(
     re.IGNORECASE,
 )
 _LAYERED_AREAS = ["application", "domain", "io"]
+_DOMAIN_AREAS = ["glossary", "application", "domain"]
+_DOMAIN_TERMS = re.compile(
+    r"\b(invoice|order|quote|payment|payout|swap|h2h|redirect|iframe|pci|token|webhook|"
+    r"on-?ramp|off-?ramp|liquidity|settlement|kyc|aml)\b",
+    re.IGNORECASE,
+)
+_AGENT_SMITH_TERMS = re.compile(
+    r"\b(agent smith|agent-smith|make agent|agent-reindex|agent-init|logs-enabled|"
+    r"autodetect|search_glossary|echo_code|llamaindex)\b",
+    re.IGNORECASE,
+)
+_AGENT_SMITH_AREAS = ["agent_smith", "docs", "infra"]
 
 
 class EmbeddingAreaClassifier:
@@ -70,11 +82,25 @@ class EmbeddingAreaClassifier:
         return selected
 
     def _intent_areas(self, question: str) -> Optional[List[str]]:
-        if not _CREATION_INTENT.search(question):
-            return None
-        cap = max(self._config.area_detect_top_k, 1)
-        known = set(self._config.area_names)
-        return [area for area in _LAYERED_AREAS if area in known][:cap]
+        if _CREATION_INTENT.search(question):
+            cap = max(self._config.area_detect_top_k, 1)
+            known = set(self._config.area_names)
+            areas = [area for area in _LAYERED_AREAS if area in known][:cap]
+            log.info("routing via creation intent: %s", areas)
+            return areas
+        if _DOMAIN_TERMS.search(question):
+            cap = max(self._config.area_detect_top_k, 1)
+            known = set(self._config.area_names)
+            areas = [area for area in _DOMAIN_AREAS if area in known][:cap]
+            log.info("routing via domain terms: %s", areas)
+            return areas
+        if _AGENT_SMITH_TERMS.search(question):
+            cap = max(self._config.area_detect_top_k, 1)
+            known = set(self._config.area_names)
+            areas = [area for area in _AGENT_SMITH_AREAS if area in known][:cap]
+            log.info("routing via agent_smith terms: %s", areas)
+            return areas
+        return None
 
     def _profiles(self) -> Dict[str, List[float]]:
         if self._area_vectors is None:

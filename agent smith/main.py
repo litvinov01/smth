@@ -19,7 +19,7 @@ from agent_smith.adapters.inbound import cli
 from agent_smith.adapters.outbound.embedding_area_classifier import EmbeddingAreaClassifier
 from agent_smith.adapters.outbound.llamaindex_knowledge_base import LlamaIndexKnowledgeBase
 from agent_smith.adapters.outbound.repo_code_navigator import RepoCodeNavigator
-from agent_smith.application.assistant import SYSTEM_PROMPT, ContributorAssistant
+from agent_smith.application.assistant import build_system_prompt, ContributorAssistant
 from agent_smith.config import load_config
 
 
@@ -27,7 +27,7 @@ def main() -> int:
     config = load_config()
     navigator = RepoCodeNavigator(config)
     classifier = EmbeddingAreaClassifier(config)
-    knowledge_base = LlamaIndexKnowledgeBase(config, navigator, SYSTEM_PROMPT)
+    knowledge_base = LlamaIndexKnowledgeBase(config, navigator, build_system_prompt())
     assistant = ContributorAssistant(knowledge_base, classifier)
     return cli.run(assistant, areas=config.area_names)
 

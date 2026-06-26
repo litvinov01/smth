@@ -24,10 +24,14 @@ DEFAULT_SOURCES = [
     "orchestrator/README.md",
     "orchestrator/prisma",
     "orchestrator/src",
+    "agent smith/glossary",
+    "agent smith/agent_smith",
+    "agent smith/README.md",
+    "agent smith/main.py",
 ]
 
 # File types worth embedding when a source entry is a directory.
-DEFAULT_INCLUDED_EXTENSIONS = [".md", ".ts", ".sol", ".prisma", ".yml", ".yaml", ".sql", ".json"]
+DEFAULT_INCLUDED_EXTENSIONS = [".md", ".ts", ".sol", ".prisma", ".yml", ".yaml", ".sql", ".json", ".txt", ".py"]
 
 # Never index these (dependency trees, build output, the agent's own index).
 # Hidden-path reading is enabled so that ".meta" can be indexed, hence the explicit dot-dir excludes.
@@ -54,6 +58,20 @@ DEFAULT_AREAS: List[Area] = [
             "and settlement at the contract level."
         ),
         include_globs=["contracts/**", "**/*.sol"],
+    ),
+    Area(
+        name="agent_smith",
+        description=(
+            "Agent Smith itself: the internal RAG assistant (agent smith/agent_smith/), its hexagonal "
+            "layout, area routing, LlamaIndex adapters, glossary integration, CLI, config env vars, and "
+            "Makefile targets (make agent, agent-reindex, logs=1). Use when contributors ask how the "
+            "agent works, how to configure or extend it, or what retrieval/routing/tools it uses."
+        ),
+        include_globs=[
+            "agent smith/agent_smith/**",
+            "agent smith/main.py",
+            "agent smith/README.md",
+        ],
     ),
     Area(
         name="domain",
@@ -107,6 +125,16 @@ DEFAULT_AREAS: List[Area] = [
         ],
     ),
     Area(
+        name="glossary",
+        description=(
+            "Swap/fintech domain glossary: transactions, orders, invoices, quotes, payments, payouts, "
+            "H2H/redirect/iframe flows, PCI, web3, statuses, compliance, APIs, and ambiguous terms. "
+            "Use when the contributor asks about domain language, disambiguating terms (invoice vs "
+            "transaction vs blockchain tx), or product concepts before diving into code."
+        ),
+        include_globs=["**/glossary/**"],
+    ),
+    Area(
         name="docs",
         description=(
             "Project documentation and onboarding: .meta guides (architecture, bootstrap, testing) "
@@ -152,6 +180,22 @@ DEFAULT_TOPICS: Dict[str, List[str]] = {
         "transaction.v1.formatter.ts",
         "transaction.v1.schema.ts",
         "transaction.docs.ts",
+    ],
+    "invoice": [
+        "fintech.txt",
+        "transaction.service.ts",
+        "transaction.entity.ts",
+    ],
+    "glossary": [
+        "fintech.txt",
+        "domain_prompt.txt",
+    ],
+    "agent-smith": [
+        "llamaindex_knowledge_base.py",
+        "embedding_area_classifier.py",
+        "assistant.py",
+        "cli.py",
+        "config.py",
     ],
 }
 
